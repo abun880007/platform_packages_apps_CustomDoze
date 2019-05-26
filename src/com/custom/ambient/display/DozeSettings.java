@@ -20,14 +20,16 @@ import android.app.ActionBar;
 import android.app.Fragment;
 import android.content.Context;
 import android.os.Bundle;
+import android.preference.PreferenceActivity;
+import android.provider.Settings;
 import android.support.v7.preference.PreferenceCategory;
 import android.support.v7.preference.Preference;
 import android.support.v14.preference.SwitchPreference;
 import android.support.v14.preference.PreferenceFragment;
-import android.preference.PreferenceActivity;
 import android.view.MenuItem;
 
 import com.aosip.support.preference.CustomSeekBarPreference;
+import com.aosip.support.preference.SystemSettingSwitchPreference;
 
 public class DozeSettings extends PreferenceActivity implements PreferenceFragment.OnPreferenceStartFragmentCallback {
 
@@ -62,14 +64,17 @@ public class DozeSettings extends PreferenceActivity implements PreferenceFragme
 
         private static final String KEY_CATEGORY_TILT_SENSOR = "tilt_sensor";
         private static final String KEY_CATEGORY_PROXIMITY_SENSOR = "proximity_sensor";
+        private static final String KEY_CATEGORY_DOUBLE_TAP = "double_tap";
 
         private Context mContext;
         private ActionBar actionBar;
 
         private PreferenceCategory mTiltCategory;
         private PreferenceCategory mProximitySensorCategory;
+        private PreferenceCategory mDoubleTapCategory;
         private SwitchPreference mAoDPreference;
         private SwitchPreference mDozeOnChargePreference;
+        private SystemSettingSwitchPreference mDoubleTapPreference;
         private SwitchPreference mAmbientDisplayPreference;
         private SwitchPreference mPickUpPreference;
         private SwitchPreference mHandwavePreference;
@@ -89,6 +94,17 @@ public class DozeSettings extends PreferenceActivity implements PreferenceFragme
 
             mAoDPreference =
                 (SwitchPreference) findPreference(Utils.AOD_KEY);
+            mDoubleTapCategory =
+                (PreferenceCategory) findPreference(KEY_CATEGORY_DOUBLE_TAP);
+            mDoubleTapPreference =
+                (SystemSettingSwitchPreference) findPreference(Utils.DOUBLE_TAP_KEY);
+
+            if (Utils.isTapToWakeAvailable(mContext)) {
+                mDoubleTapPreference.setOnPreferenceChangeListener(this);
+            } else {
+                getPreferenceScreen().removePreference(mDoubleTapCategory);
+            }
+
             if (Utils.isAoDAvailable(mContext)) {
                 mAoDPreference.setChecked(Utils.isAoDEnabled(mContext));
                 mAoDPreference.setOnPreferenceChangeListener(this);
@@ -177,6 +193,12 @@ public class DozeSettings extends PreferenceActivity implements PreferenceFragme
                 mPocketPreference.setChecked(value);
                 Utils.enablePocketMode(value, mContext);
                 return true;
+            } else if (Utils.DOUBLE_TAP_KEY.equals(key)) {
+                if (!Utils.isTapToWakeEnabled(mContext)); {
+                    Settings.Secure.putInt(mContext.getContentResolver(),
+                            Settings.Secure.DOUBLE_TAP_TO_WAKE, 1);
+                }
+                return true;
             }
             return false;
         }
@@ -185,6 +207,7 @@ public class DozeSettings extends PreferenceActivity implements PreferenceFragme
             final boolean aodEnabled = Utils.isAoDEnabled(mContext);
             mAmbientDisplayPreference.setEnabled(!aodEnabled);
             mDozeOnChargePreference.setEnabled(!aodEnabled);
+            mDoubleTapPreference.setEnabled(!aodEnabled);
             mPickUpPreference.setEnabled(!aodEnabled);
             mHandwavePreference.setEnabled(!aodEnabled);
             mPocketPreference.setEnabled(!aodEnabled);
